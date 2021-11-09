@@ -3,6 +3,7 @@
 //
 
 #include "CachePool.h"
+#define MIN_CACHE_CONN_CNT 2
 
 CacheManager* CacheManager::s_cache_manager = nullptr;
 
@@ -69,15 +70,54 @@ CacheManager::~CacheManager() {
 
 }
 
-CachePool::CachePool(const char *pool_name, const char *server_ip, uint32_t server_port, uint32_t db_num,
-                     uint32_t max_conn_cnt) {
-
+CachePool::CachePool(const char *pool_name, const char *server_ip, uint32_t server_port, uint32_t db_num,uint32_t max_conn_cnt) {
+    m_pool_name = pool_name;
+    m_server_ip = server_ip;
+    m_server_port = server_port;
+    m_db_num = db_num;
+    m_max_conn_cnt = max_conn_cnt;
+    m_cur_conn_cnt = MIN_CACHE_CONN_CNT;
 }
 
 CachePool::~CachePool() {
-
+    //上锁
+    m_free_notify.Lock();
+    for (std::list<CacheConn*>::iterator it = m_free_list.begin();it != m_free_list.end();++it) {
+        CacheConn *pConn = *it;
+        delete pConn;
+    }
+    m_free_list.clear();
+    m_cur_conn_cnt = 0;
+    m_free_notify.Unlock();
 }
 
 int CachePool::Init() {
+    for (int i = 0; i < m_cur_conn_cnt; ++i) {
+        CacheConn *pConn = new CacheConn(this);
+        if (pConn->Init()){
+            delete pConn;
+            return 1;
+        }
+        m_free_list.push_back(pConn);
+    }
+    DLOG(INFO)<< "cache pool  "<<m_pool_name<< " list size "<<m_free_list.size()<<endl;
+    return 0;
+}
+
+CacheConn::CacheConn(CachePool *pCachePool) {
+    m_pCachePool = pCachePool;
+    m_pContext = nullptr;
+    m_last_connect_time = 0;
+
+}
+
+CacheConn::~CacheConn() {
+    if (m_pContext){
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+    }
+}
+
+int CacheConn::Init() {
     return 0;
 }

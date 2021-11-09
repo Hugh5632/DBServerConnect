@@ -5,9 +5,10 @@
 #ifndef DBSERVERCONNECT_CACHEPOOL_H
 #define DBSERVERCONNECT_CACHEPOOL_H
 
-#include "ThreadPool.h"
 #include "util.h"
 #include "ConfigFileReader.h"
+#include "Thread.h"
+
 
 
 // redis 缓存池对象
@@ -16,30 +17,37 @@ class CachePool;
 // redis 连接对象
 class CacheConn{
 public:
-    CacheConn() =default;
-    ~CacheConn() = default;
+    CacheConn(CachePool* pCachePool);
+    virtual ~CacheConn() ;
     //初始化CacheConn
     int Init();
 
 private:
+    CachePool* m_pCachePool;
+    redisContext* m_pContext;
+    uint64_t m_last_connect_time;
 
 };
 
 class CachePool{
 public:
     CachePool(const char* pool_name,const char* server_ip,uint32_t server_port,uint32_t db_num,uint32_t max_conn_cnt );
-    CachePool() = default;
     virtual ~CachePool();
     //初始化CachePool
     int Init();
+    CachePool *GetCacheConn();
 
 private:
-    std::list<CacheConn*> m_free_list;
+    std::list<CacheConn*> m_free_list; // 空闲CachePool
+    CThreadNotify m_free_notify;
+
     std::string m_pool_name;
-    uint32_t m_pool_port;
+    std::string m_server_ip;
+    uint32_t m_server_port;
     uint32_t m_db_num;
     uint32_t m_max_conn_cnt;
     uint32_t m_cur_conn_cnt;
+
 
 
 };

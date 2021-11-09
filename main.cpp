@@ -10,6 +10,8 @@ void InitGlog(char *argv[]){
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
     FLAGS_colorlogtostderr = true;
+
+
 }
 
 int main(int argc, char *argv[]) {
