@@ -23,8 +23,16 @@ char *CConfigFileReader::GetConfigName(const char* name) {
     return value;
 }
 
-char *CConfigFileReader::SetConfigValue() {
-    return nullptr;
+uint32_t CConfigFileReader::SetConfigValue(const char* name,const char* value) {
+    if (!m_load_ok)
+        return -1;
+    std::map<std::string,std::string>::iterator it = m_config_map.find(name);
+    if (it != m_config_map.end()){
+        it->second = value;
+    } else{
+        m_config_map.insert(std::make_pair(name,value));
+    }
+    return WriteFile();
 }
 
 void CConfigFileReader::LoadFile(const char *file_name) {
@@ -48,7 +56,7 @@ void CConfigFileReader::LoadFile(const char *file_name) {
 
             char *ch = strchr(buf,'#');
             if (ch)
-                ch = 0;
+                *ch = 0;
             if (strlen(buf) == 0)
                 continue;
             ParseLine(buf);
@@ -59,6 +67,27 @@ void CConfigFileReader::LoadFile(const char *file_name) {
 }
 
 int CConfigFileReader::WriteFile(const char *file_name) {
+    FILE *fp = nullptr;
+    if (file_name == nullptr){
+        fp = fopen(m_config_filename.c_str(),"w");
+    } else{
+        fp = fopen(file_name,"w");
+    }
+    if (!fp){
+        return -1;
+    }
+    char szPaire[128];
+    std::map<std::string,std::string>::iterator it = m_config_map.begin();
+    for (; it != m_config_map.end(); ++it) {
+        memset(szPaire,0,sizeof(szPaire));
+        snprintf(szPaire,sizeof(szPaire),"%s = %s\n",it->first.c_str(),it->second.c_str());
+        uint32_t ret = fwrite(szPaire,strlen(szPaire),1,fp);
+        if (ret != 1){
+            fclose(fp);
+            return -1;
+        }
+    }
+    fclose(fp);
     return 0;
 }
 

@@ -15,20 +15,20 @@ public:
 
     char* GetConfigName(const char* name);
 
-    char* SetConfigValue();
+    uint32_t SetConfigValue(const char* name,const char* value);
 
 private:
     void LoadFile(const char* file_name);
 
-    int WriteFile(const char * file_name);
+    int WriteFile(const char * file_name= nullptr);
 
     void ParseLine(char* line);
 
     char *TrimSpace(char* line);
 
-    bool m_load_ok;
-    std::string m_config_filename;
-    std::map<std::string,std::string> m_config_map;
+    bool m_load_ok; //是否加载配置文件完毕
+    std::string m_config_filename; // 配置文件路径
+    std::map<std::string,std::string> m_config_map; // 缓存 存放配置
 
 };
 

@@ -23,7 +23,6 @@ int main(int argc, char *argv[]) {
 
     CacheManager* pCacheManager = CacheManager::GetInstance();
 
-
     if (!pCacheManager){
         DLOG(ERROR)<<" CacheManager init failed "<<std::endl;
         return  -1;
