@@ -52,8 +52,8 @@ public:
     //获取在hash表中指定key的所有字段和值
     bool hgetAll(std::string key,std::map<std::string,std::string>& hash);
 
-    //获取存储在hash表中指定字段的值
-    uint64_t hget(std::string key,std::string fields,std::string value);
+    //
+    uint64_t hset(std::string key,std::string fields,std::string value);
 
     // 为hash表中的指定字段的整数值加上增量increment
     uint64_t hincrBy(std::string key,std::string field,uint64_t value);

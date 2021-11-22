@@ -34,7 +34,7 @@ CacheManager *CacheManager::GetInstance() {
 
 int CacheManager::Init() {
     // 读取配置文件
-    CConfigFileReader config_file("/home/project/config/dbproxyserver.conf");
+    CConfigFileReader config_file("/home/project/DBServerConnect/config/dbproxyserver.conf");
     char* cache_instances = config_file.GetConfigName("CacheInstances");
     if (!cache_instances){
         DLOG(ERROR)<<" not configure CacheIntance "<<endl;
@@ -392,47 +392,217 @@ bool CacheConn::hgetAll(std::string key, std::map<std::string, std::string> &ret
     return true;
 }
 
-uint64_t CacheConn::hget(std::string key, std::string fields, std::string value) {
-    return 0;
+uint64_t CacheConn::hset(std::string key, std::string field, std::string value) {
+    if (Init()){
+        return -1;
+    }
+
+    redisReply *reply =  (redisReply*) redisCommand(m_pContext,"HSET %s %s %s",key.c_str(),field.c_str(),value.c_str());
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext  = nullptr;
+        return  -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 uint64_t CacheConn::hincrBy(std::string key, std::string field, uint64_t value) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"HINCRBY %s %s %ld",key.c_str(),field.c_str(),value);
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 uint64_t CacheConn::incrBy(std::string key, uint64_t value) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"INCRBY %s %ld",key.c_str(),value);
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 std::string CacheConn::hmset(std::string key, std::map<std::string, std::string> &hash) {
-    return std::string();
+    std::string ret_value;
+    if (Init()){
+        return ret_value;
+    }
+    int argc = hash.size() *2 + 2;
+    const char **argv = new const char*[argc];
+    argv[0] = "HMSET";
+    argv[1] = key.c_str();
+    int i = 2;
+    for (std::map<std::string,std::string>::iterator it = hash.begin();it!= hash.end();++it) {
+        argv[i++] = it->first.c_str();
+        argv[i++] = it->second.c_str();
+    }
+    redisReply *reply = (redisReply*) redisCommandArgv(m_pContext,argc,argv,nullptr);
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        delete [] argv;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return ret_value;
+    }
+    ret_value.append(reply->str,reply->len);
+    freeReplyObject(reply);
+    return ret_value;
+
 }
 
 bool CacheConn::hmget(std::string key, std::list<std::string> &fields, std::list<std::string> &ret_value) {
-    return false;
+    if (Init()){
+        return -1;
+    }
+    int argc = fields.size() + 2;
+    const char** argv =new const char*[argc];
+    if (!argv){
+        return false;
+    }
+    argv[0] = "HMGET";
+    argv[1] = key.c_str();
+    int i = 2;
+    for(std::list<std::string>::iterator it = fields.begin();it !=fields.end();++it){
+        argv[i++] = it->c_str();
+    }
+    redisReply *reply = (redisReply *)redisCommandArgv(m_pContext,argc,(const char**)argv,nullptr);
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        delete []argv;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return false;
+    }
+    if (reply->type == REDIS_REPLY_ARRAY){
+        for(size_t i = 0;i < reply->elements;++i){
+            redisReply *value_reply = reply->element[i];
+            std::string value(value_reply->str,value_reply->len);
+            ret_value.emplace_back(value);
+        }
+    }
+    delete []argv;
+    freeReplyObject(reply);
+    return true;
+
 }
 
 uint64_t CacheConn::incr(std::string key) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply * reply = (redisReply*) redisCommand(m_pContext,"INCR %s",key.c_str());
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t  ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 uint64_t CacheConn::decr(std::string key) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"DECR %s",key.c_str());
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 uint64_t CacheConn::lpush(std::string key, std::string value) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"LPUSH %s %s",key.c_str(),value.c_str());
+    if (!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 uint64_t CacheConn::rpush(std::string key, std::string value) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"RPUSH %s %s",key.c_str(),value.c_str());
+    if(!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
-
 uint64_t CacheConn::llen(std::string key) {
-    return 0;
+    if (Init()){
+        return -1;
+    }
+    redisReply *reply = (redisReply*) redisCommand(m_pContext,"LLEN %s",key.c_str());
+    if(!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    uint64_t ret_value = reply->integer;
+    freeReplyObject(reply);
+    return ret_value;
 }
 
 bool CacheConn::lrange(std::string key, uint64_t start, uint64_t end, std::list<std::string> &ret_value) {
-    return false;
+    if (Init()){
+        return false;
+    }
+    redisReply *reply = (redisReply*)redisCommand(m_pContext,"LRANGE %s %d %d",key.c_str(),start,end);
+    if(!reply){
+        DLOG(INFO)<<" redisCommand failed "<<m_pContext->errstr<<endl;
+        redisFree(m_pContext);
+        m_pContext = nullptr;
+        return -1;
+    }
+    if (reply->type == REDIS_REPLY_ARRAY){
+        for (size_t i = 0;i<reply->elements;++i) {
+            redisReply* value_reply = reply->element[i];
+            std::string value(value_reply->str,value_reply->len);
+            ret_value.emplace_back(value);
+        }
+    }
+    freeReplyObject(reply);
+    return true;
 }
 
