@@ -27,7 +27,7 @@ link_libraries(libglog.a)
 
 
 
-add_executable(DBServerConnect main.cpp redis/CachePool.cpp redis/CachePool.h util/ThreadPool.cpp util/ThreadPool.h util/util.cpp util/util.h util/ConfigFileReader.cpp util/ConfigFileReader.h util/Thread.cpp util/Thread.h)
+add_executable(DBServerConnect main.cpp redis/CachePool.cpp redis/CachePool.h util/ThreadPool.cpp util/ThreadPool.h util/util.cpp util/util.h util/ConfigFileReader.cpp util/ConfigFileReader.h util/Thread.cpp util/Thread.h mysql/DBPool.cpp mysql/DBPool.h)
 
 
 TARGET_LINK_LIBRARIES(
